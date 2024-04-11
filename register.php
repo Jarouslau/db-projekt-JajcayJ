@@ -7,7 +7,7 @@ $message = "";
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $servername = "localhost";
     $username = "root";
-    $password = ""; // Tu zadajte heslo k databáze
+    $password = ""; 
     $dbname = "jajcay";
 
     // Vytvorenie pripojenia
@@ -16,24 +16,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Kontrola pripojenia
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
-    } else {
-        $message = "Connected successfully";
     }
 
+    // Získanie hodnôt z formulára
     $username = $_POST['username'];
-    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $password = $_POST['password'];
+    $confirm_password = $_POST['confirm_password'];
 
-    $sql = "INSERT INTO user (username, password) VALUES (?, ?)";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ss", $username, $password);
-
-    if ($stmt->execute()) {
-        $message .= " New record created successfully.";
+    // Kontrola, či sa heslá zhodujú
+    if ($password != $confirm_password) {
+        $message = 'Heslá sa nezhodujú.';
     } else {
-        $message = "Error: " . $stmt->error;
-    }
+        // Hashovanie hesla a pokračovanie v registrácii
+        $password_hash = password_hash($password, PASSWORD_DEFAULT);
+        $sql = "INSERT INTO user (username, password) VALUES (?, ?)";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("ss", $username, $password_hash);
 
-    $stmt->close();
+        if ($stmt->execute()) {
+            $message = "New record created successfully.";
+        } else {
+            $message = "Error: " . $stmt->error;
+        }
+        $stmt->close();
+    }
     $conn->close();
 }
 ?>
@@ -47,7 +53,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </head>
 <body>
 
-<!-- Tu zobrazíme správu ak existuje -->
+
 <?php if ($message): ?>
     <div id="message"><?php echo $message; ?></div>
 <?php endif; ?>
@@ -57,6 +63,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <h1>Registration</h1>
         <input type="text" name="username" placeholder="username" required autofocus><br>
         <input type="password" name="password" placeholder="password" required>
+        <input type="password" name="confirm_password" placeholder="confirm password" required>
+        
         <button type="submit" name="submit">Register</button>
         <a href="index.php" id="Register">Log in</a>
     </form>
