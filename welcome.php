@@ -29,7 +29,7 @@
             background-color: #fff;
             color: #333;
         }
-        input[type="submit"] {
+        input[type="submit"], .logout-button {
             padding: 10px 20px;
             background-color: #4CAF50; /* Green */
             color: white;
@@ -65,6 +65,11 @@
 </head>
 <body>
     <h1>Vitaj na stránke</h1>
+    <!-- Logout Form -->
+    <form action="logout.php" method="post">
+        <button type="submit" class="logout-button">Odhlásiť sa</button>
+    </form>
+
     <div class="filter-form">
         <form method="get">
             <input type="text" name="name" placeholder="Search by name" value="<?php echo $_GET['name'] ?? ''; ?>">
@@ -75,29 +80,67 @@
                 <option value="vlna" <?php echo (isset($_GET['latka']) && $_GET['latka'] === 'vlna') ? 'selected' : ''; ?>>Vlna (Wool)</option>
                 <option value="polyester" <?php echo (isset($_GET['latka']) && $_GET['latka'] === 'polyester') ? 'selected' : ''; ?>>Polyester</option>
             </select>
+            <select name="sort">
+                <option value="name_asc">Name A-Z</option>
+                <option value="name_desc">Name Z-A</option>
+                <option value="price_asc">Price Low to High</option>
+                <option value="price_desc">Price High to Low</option>
+                <option value="id_asc">ID Ascending</option>
+                <option value="id_desc">ID Descending</option>
+            </select>
             <input type="submit" value="Filter">
         </form>
     </div>
 
     <div class="product-grid">
         <?php
+        // Database connection details
         $servername = "localhost";
         $username = "root";
         $password = "";
         $dbname = "jajcay";
 
+        // Connect to the database
         $conn = new mysqli($servername, $username, $password, $dbname);
         if ($conn->connect_error) {
             die("Connection failed: " . $conn->connect_error);
         }
 
+        // Fetch and filter data
         $name = $_GET['name'] ?? '';
         $max_price = $_GET['max_price'] ?? 100;
         $latka = $_GET['latka'] ?? '';
+        $sort = $_GET['sort'] ?? 'id_asc';
 
+        // Determine sort order based on input
+        switch ($sort) {
+            case 'name_asc':
+                $orderBy = "ORDER BY nazov ASC";
+                break;
+            case 'name_desc':
+                $orderBy = "ORDER BY nazov DESC";
+                break;
+            case 'price_asc':
+                $orderBy = "ORDER BY cena ASC";
+                break;
+            case 'price_desc':
+                $orderBy = "ORDER BY cena DESC";
+                break;
+            case 'id_asc':
+                $orderBy = "ORDER BY id ASC";
+                break;
+            case 'id_desc':
+                $orderBy = "ORDER BY id DESC";
+                break;
+            default:
+                $orderBy = "ORDER BY id ASC"; // Fallback to default
+        }
+
+        // Build SQL query
         $sql = "SELECT id, nazov, cena, obrazok FROM products WHERE cena <= $max_price" .
                ($name ? " AND nazov LIKE '%" . $conn->real_escape_string($name) . "%'" : "") .
-               ($latka ? " AND latka = '" . $conn->real_escape_string($latka) . "'" : "");
+               ($latka ? " AND latka = '" . $conn->real_escape_string($latka) . "'" : "") .
+               " " . $orderBy;
         $result = $conn->query($sql);
 
         if ($result->num_rows > 0) {
